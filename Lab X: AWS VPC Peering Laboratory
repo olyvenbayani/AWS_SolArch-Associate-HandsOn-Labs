@@ -1,0 +1,223 @@
+# AWS VPC Peering Laboratory
+
+## Overview
+
+AWS Virtual Private Cloud (VPC) Peering is a networking connection between two VPCs that enables you to route traffic between them using private IPv4 or IPv6 addresses. Instances in either VPC can communicate with each other as if they were within the same network. This eliminates the need for traffic to traverse the public internet, enhancing security and reducing latency.
+
+In this hands-on lab, you will create two VPCs, establish a VPC Peering connection between them, update route tables, and verify connectivity between EC2 instances across the peered VPCs.
+
+**Key Concepts:**
+- **VPC Peering** provides a direct, private network link between two VPCs.
+- **Non-Transitive:** VPC Peering does not support transitive peering. If VPC A is peered with VPC B and VPC B is peered with VPC C, VPC A cannot communicate with VPC C through VPC B.
+- **No Overlapping CIDRs:** The CIDR blocks of the peered VPCs must not overlap.
+- **Traffic stays on the AWS backbone network** — no public internet traversal.
+
+**Architecture Overview:**
+
+![VPC Peering Architecture Diagram](https://www.hava.io/blog/what-is-aws-vpc-peering/)
+
+---
+
+## Prerequisites
+
+Before starting this lab, ensure you have:
+- An active AWS account with appropriate permissions.
+- Two VPCs with **non-overlapping CIDR blocks** (e.g., VPC-A: `10.0.0.0/16`, VPC-B: `10.1.0.0/16`).
+- EC2 instances launched in each VPC for testing connectivity.
+- IAM permissions to create VPC peering connections, modify route tables, and manage security groups.
+
+---
+
+## 1. Creating the VPC Peering Connection
+
+**1-a.** From the AWS Management Console, search for **VPC** in the services search bar.
+
+![Step 1a - Search for VPC](https://kimi-web-img.moonshot.cn/img/000019.awsstudygroup.com/10a1d3b26cf719036027b3f441d68df47cd5feab.png)
+
+**1-b.** In the left-hand navigation menu, under **Virtual private cloud**, click on **Peering connections**.
+
+![Step 1b - Navigate to Peering Connections](https://kimi-web-img.moonshot.cn/img/networkproguide.com/33590db0c8fd5611330dc204ecab40778233177d.jpg)
+
+**1-c.** Click the **Create peering connection** button in the top-right corner.
+
+![Step 1c - Create Peering Connection Button](https://kimi-web-img.moonshot.cn/img/networkproguide.com/33590db0c8fd5611330dc204ecab40778233177d.jpg)
+
+**1-d.** Fill in the peering connection details:
+- **Peering connection name tag:** Enter a descriptive name (e.g., `vpc-a-to-b-peering`).
+- **VPC (Requester):** Select your first VPC (e.g., VPC-A) from the dropdown.
+- **Account:** Select **My account** (or specify another account if cross-account peering).
+- **Region:** Select **This Region** (or another region for cross-region peering).
+- **VPC ID (Accepter):** Select your second VPC (e.g., VPC-B) from the dropdown.
+
+![Step 1d - Peering Connection Form](https://kimi-web-img.moonshot.cn/img/networkproguide.com/694e5e5656ed4fc9a83bbd5cd77a82804d302a0e.png)
+
+**1-e.** Click **Create peering connection**. You will see a confirmation banner indicating the connection has been requested.
+
+![Step 1e - Peering Connection Requested](https://kimi-web-img.moonshot.cn/img/miro.medium.com/f1ae1b948741dc600290eb40417db214a9e90ed0.png)
+
+**1-f.** The newly created peering connection will appear in the list with a status of **Pending acceptance**.
+
+![Step 1f - Pending Acceptance Status](https://kimi-web-img.moonshot.cn/img/graphenedb.com/0c31c855ddd76b3f06175d5c5284021ae567f02f.png)
+
+---
+
+## 2. Accepting the VPC Peering Connection
+
+**2-a.** Select the peering connection you just created by clicking its checkbox.
+
+**2-b.** Click the **Actions** dropdown menu and select **Accept request**.
+
+![Step 2b - Accept Request Action](https://kimi-web-img.moonshot.cn/img/networkproguide.com/1874e9762475e193b676e54515252ca29b680fa4.png)
+
+**2-c.** In the confirmation dialog, click **Accept request** to confirm.
+
+**2-d.** Once accepted, the peering connection status will change to **Active**. You will also see a green success banner at the top.
+
+![Step 2d - Active Peering Connection](https://kimi-web-img.moonshot.cn/img/miro.medium.com/692caa9a37e0e9cf47d2668e2f37cfb7a3dd6ad0.png)
+
+**2-e.** Click **Modify my route tables now** in the success banner to proceed with routing configuration (or navigate to Route Tables manually).
+
+![Step 2e - Modify Route Tables Now](https://kimi-web-img.moonshot.cn/img/networkproguide.com/ee79f7030c40c1a8a29bb8b5327c3105f78b46fc.png)
+
+---
+
+## 3. Updating Route Tables
+
+After the peering connection is active, you must update the route tables in **both VPCs** to allow traffic to flow between them. Without this step, instances in the peered VPCs cannot communicate.
+
+### 3.1 Update Route Table for VPC-A (Requester)
+
+**3-a.** Navigate to **Route Tables** in the left-hand menu under **Virtual private cloud**.
+
+**3-b.** Select the route table associated with VPC-A (the one attached to your subnet).
+
+**3-c.** Click the **Routes** tab, then click **Edit routes**.
+
+![Step 3c - Edit Routes](https://kimi-web-img.moonshot.cn/img/media2.dev.to/640d00cc7d19a59c8d24529199ab506475da807b.png)
+
+**3-d.** Click **Add route** and configure:
+- **Destination:** Enter the CIDR block of VPC-B (e.g., `10.1.0.0/16`).
+- **Target:** Select the peering connection ID (starts with `pcx-...`) from the dropdown.
+
+**3-e.** Click **Save changes**.
+
+![Step 3e - Route Table with Peering Route](https://kimi-web-img.moonshot.cn/img/media2.dev.to/640d00cc7d19a59c8d24529199ab506475da807b.png)
+
+### 3.2 Update Route Table for VPC-B (Accepter)
+
+**3-f.** Repeat the same process for VPC-B's route table:
+- Select the route table associated with VPC-B.
+- Click **Routes** tab → **Edit routes**.
+- **Add route** with:
+  - **Destination:** CIDR block of VPC-A (e.g., `10.0.0.0/16`).
+  - **Target:** The same peering connection ID (`pcx-...`).
+- Click **Save changes**.
+
+> **Important:** Both VPCs must have routes pointing to each other via the peering connection. Traffic will not flow if either side is missing the route.
+
+---
+
+## 4. Configuring Security Groups
+
+To allow EC2 instances in peered VPCs to communicate (e.g., via ping/ICMP), you must update the security group inbound rules.
+
+**4-a.** Navigate to the **EC2 Dashboard** → **Security Groups**.
+
+**4-b.** Select the security group attached to the EC2 instance in VPC-A.
+
+**4-c.** Click the **Inbound rules** tab, then click **Edit inbound rules**.
+
+**4-d.** Add a new rule:
+- **Type:** All ICMP - IPv4 (or Custom ICMP - Echo Request for ping only).
+- **Protocol:** ICMP.
+- **Port Range:** N/A (or 0-65535 for All ICMP).
+- **Source:** Enter the CIDR block of VPC-B (e.g., `10.1.0.0/16`).
+
+![Step 4d - Security Group ICMP Rules](https://kimi-web-img.moonshot.cn/img/i.sstatic.net/2214a73cee0c74188bc2ac7ea5d31ee817e5c3b8.png)
+
+**4-e.** Click **Save rules**.
+
+**4-f.** Repeat the same process for the security group attached to the EC2 instance in VPC-B, using VPC-A's CIDR block as the source.
+
+> **Security Best Practice:** In production, restrict the source to the specific peer VPC CIDR rather than `0.0.0.0/0`. Only allow the minimum necessary ports and protocols.
+
+---
+
+## 5. Testing Connectivity
+
+Now that the peering connection, route tables, and security groups are configured, it's time to verify that instances in the peered VPCs can communicate.
+
+**5-a.** Navigate to the **EC2 Dashboard** and note the **Private IPv4 address** of the instance in VPC-B.
+
+![Step 5a - EC2 Instance Details](https://kimi-web-img.moonshot.cn/img/networkproguide.com/7cfe05f5e389d859197e980650ba51397140d114.png)
+
+**5-b.** SSH into the EC2 instance in VPC-A using its public IP (or via Session Manager).
+
+**5-c.** From the VPC-A instance, run a ping test to the private IP of the VPC-B instance:
+
+```bash
+ping <private-ip-of-vpc-b-instance>
+```
+
+**5-d.** If everything is configured correctly, you should see successful ping responses:
+
+```
+PING 10.1.1.187 (10.1.1.187) 56(84) bytes of data.
+64 bytes from 10.1.1.187: icmp_seq=1 ttl=64 time=1.23 ms
+64 bytes from 10.1.1.187: icmp_seq=2 ttl=64 time=0.98 ms
+```
+
+**5-e.** You can also test connectivity from VPC-B to VPC-A by SSH-ing into the VPC-B instance and pinging the private IP of the VPC-A instance.
+
+> **Troubleshooting Tip:** If ping fails, double-check:
+> 1. Route tables in both VPCs have correct routes to the peer VPC CIDR via the peering connection.
+> 2. Security groups allow inbound ICMP from the peer VPC CIDR.
+> 3. Network ACLs are not blocking the traffic.
+> 4. The peering connection status is **Active**.
+
+---
+
+## 6. Cross-Peering DNS (Optional)
+
+If you want instances in one VPC to resolve DNS names of resources in the peered VPC, you can enable DNS resolution.
+
+**6-a.** Go to the **VPC Dashboard** → **Peering connections**.
+
+**6-b.** Select your active peering connection.
+
+**6-c.** Click the **Actions** dropdown and select **Edit DNS settings**.
+
+**6-d.** Enable **Allow DNS resolution from accepter VPC to private IP** and **Allow DNS resolution from requester VPC to private IP**.
+
+**6-e.** Click **Save**.
+
+> **Note:** DNS resolution across peering requires that both VPCs have DNS hostnames and DNS resolution enabled in their settings.
+
+---
+
+## 7. Cleanup
+
+To avoid unnecessary charges, clean up the resources created in this lab:
+
+1. **Delete the VPC Peering Connection:**
+   - Go to **VPC** → **Peering connections**.
+   - Select the peering connection, click **Actions** → **Delete peering connection**.
+
+2. **Remove Peering Routes from Route Tables:**
+   - Go to **VPC** → **Route tables**.
+   - Edit routes and remove the entries pointing to the peer VPC CIDR via the peering connection.
+
+3. **Remove Security Group Rules (if added specifically for this lab).**
+
+4. **Terminate EC2 instances** (if created solely for this lab).
+
+---
+
+## Key Takeaways
+
+- VPC Peering enables private communication between two VPCs without traversing the public internet.
+- Both VPCs must have **non-overlapping CIDR blocks**.
+- After creating and accepting the peering connection, you **must update route tables in both VPCs**.
+- **Security groups and Network ACLs** must allow traffic from the peer VPC CIDR.
+- VPC Peering is **not transitive** — each pair of VPCs requires its own peering connection.
+- For complex multi-VPC architectures, consider using **AWS Transit Gateway** instead of multiple peering connections.

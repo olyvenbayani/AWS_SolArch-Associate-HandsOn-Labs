@@ -187,21 +187,5 @@ By carefully configuring Network Access Control Lists (NACLs), we've successfull
 
 **Great work!**
 
-Please copy the following JSON to the textbox and fill in the required AWS resource details:
-
-
-```
-{
-   "bastion_instance_id": "",
-   "appserver_instance_id": "",
-   "key_pair_name": "",
-   "bastion_security_group_id": "",
-   "appserver_security_group_id": "",
-   "private_nacl_id": "",
-   "private_route_table_id": "",
-   "public_route_table_id": ""
-}
-```
-
 ## Resource Cleanup
 Don't forget to terminate all the instances and delete the other resources you created during this lab.

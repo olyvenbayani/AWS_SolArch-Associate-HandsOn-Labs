@@ -94,14 +94,4 @@ Now you have created the autoscaling group, let’s now test if our configuratio
 
 
 Well done!
-
-Please copy and paste the JSON in the textbox found on the left side and supply the necessary information.
-
-```json
-{
- "launch_template_name":"",
- "autoscaling_group_name": ""
-}
-```
-
-**To delete the resources, first delete the autoscaling group the instances created will be automatically terminated.**
+he resources, first delete the autoscaling group the instances created will be automatically terminated.**

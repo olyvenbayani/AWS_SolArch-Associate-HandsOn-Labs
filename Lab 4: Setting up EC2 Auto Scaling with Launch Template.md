@@ -94,4 +94,4 @@ Now you have created the autoscaling group, let’s now test if our configuratio
 
 
 Well done!
-he resources, first delete the autoscaling group the instances created will be automatically terminated.**
+**To delete the resources, first delete the autoscaling group the instances created will be automatically terminated.**
